@@ -14,37 +14,39 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
+"""A module for python-chess which outputs an HTML table of a board.
 
-# NOTE: This file is currently in a beta, proof-of-concept stage.
+This file is currently in a beta, proof-of-concept stage.
+"""
 
 import chess
 
-TABLE_HEAD = """<table id="chess_board" cellpadding="0" cellspacing="0">"""
+TABLE_HEAD = """<table class="chess_board">"""
 TABLE_HEAD_COORDS = """<thead>
     <tr>
         <th></th>
-        <th>A</th>
-        <th>B</th>
-        <th>C</th>
-        <th>D</th>
-        <th>E</th>
-        <th>F</th>
-        <th>G</th>
-        <th>H</th>
+        <th>a</th>
+        <th>b</th>
+        <th>c</th>
+        <th>d</th>
+        <th>e</th>
+        <th>f</th>
+        <th>g</th>
+        <th>h</th>
         <th></th>
     </tr>
 </thead>
 <tfoot>
     <tr>
         <th></th>
-        <th>A</th>
-        <th>B</th>
-        <th>C</th>
-        <th>D</th>
-        <th>E</th>
-        <th>F</th>
-        <th>G</th>
-        <th>H</th>
+        <th>a</th>
+        <th>b</th>
+        <th>c</th>
+        <th>d</th>
+        <th>e</th>
+        <th>f</th>
+        <th>g</th>
+        <th>h</th>
         <th></th>
     </tr>
 </tfoot>
@@ -56,30 +58,42 @@ TABLE_HEAD_COORDS = """<thead>
 """
 TABLE_ROW_HEAD = """<tr>"""
 TABLE_ROW_COORDS = """<th>{rank}</th>"""
-TABLE_DATA = """<td id="{square}">
-    <a href="#" class="{piece_name} {color} {check} {lastmove}">{attack}{symbol}</a>
-</td>
+TABLE_ATTACK = """<a href="#" class="attack">&times;</a>"""
+TABLE_DATA = """<td id="{square}" class="{lastmove}">{attack}<a href="#" class="{piece_name} {color} {check}">{symbol}</a></td>
 """
 TABLE_ROW_FOOT = """</tr>"""
 TABLE_FOOT = """</table>"""
 
 def piece(piece: chess.Piece):
+    """Renders the given :class:`chess.Piece` as HTML escaped unicode.
+    """
     return piece.unicode_symbol().encode('ascii', 'xmlcharrefreplace').decode()
 
 
 def board(board: chess.Board, squares=[], flipped=False, coordinates=True,
           lastmove=None, check=None):
-    HTML = TABLE_HEAD
+    """
+    Renders a board with pieces and/or selected squares as an HTML table.
+
+    :param board: A :class:`chess.BaseBoard` for a chessboard with pieces or
+        ``None`` (the default) for a chessboard without pieces.
+    :param squares: A :class:`chess.SquareSet` with selected squares.
+    :param flipped: Pass ``True`` to flip the board.
+    :param coordinates: Pass ``False`` to disable coordinates in the margin.
+    :param lastmove: A :class:`chess.Move` to be highlighted.
+    :param check: A square to be marked as check.
+    """
+    html = TABLE_HEAD
     if coordinates:
-        HTML += TABLE_HEAD_COORDS
+        html += TABLE_HEAD_COORDS
     if flipped:
         rank_names = chess.RANK_NAMES
     else:
         rank_names = chess.RANK_NAMES[::-1]
     for rank in rank_names:
-        HTML += TABLE_ROW_HEAD
+        html += TABLE_ROW_HEAD
         if coordinates:
-            HTML += TABLE_ROW_COORDS.format(rank=rank)
+            html += TABLE_ROW_COORDS.format(rank=rank)
         for file in chess.FILE_NAMES:
             square = chess.square(chess.FILE_NAMES.index(file),
                                   chess.RANK_NAMES.index(rank))
@@ -87,9 +101,7 @@ def board(board: chess.Board, squares=[], flipped=False, coordinates=True,
                     'color': '', 'symbol': '', 'attack': '', 'check': '',
                     'lastmove': ''}
             if square in squares:
-                data['attack'] = 'X'
-            if square == check:
-                data['check'] = 'check'
+                data['attack'] = TABLE_ATTACK
             if lastmove and square in [lastmove.from_square,
                                        lastmove.to_square]:
                 data['lastmove'] = 'lastmove'
@@ -98,9 +110,14 @@ def board(board: chess.Board, squares=[], flipped=False, coordinates=True,
                 data['symbol'] = piece(piece_obj)
                 data['color'] = chess.COLOR_NAMES[piece_obj.color]
                 data['piece_name'] = chess.PIECE_NAMES[piece_obj.piece_type]
-            HTML += TABLE_DATA.format(**data)
+                if square == check:
+                    data['check'] = 'check'
+                elif (board.is_check() and piece_obj.piece_type == chess.KING
+                      and board.turn == piece_obj.color):
+                    data['check'] = 'check'
+            html += TABLE_DATA.format(**data)
         if coordinates:
-            HTML += TABLE_ROW_COORDS.format(rank=rank)
-        HTML += TABLE_ROW_FOOT
-    HTML += TABLE_FOOT
-    return HTML
+            html += TABLE_ROW_COORDS.format(rank=rank)
+        html += TABLE_ROW_FOOT
+    html += TABLE_FOOT
+    return html
