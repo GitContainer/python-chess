@@ -31,8 +31,6 @@ DEFAULT_CSS = """.chess_board {
     font-family: sans-serif;
     border-collapse: collapse;
     border-spacing: 0;
-    margin-left: auto;
-    margin-right: auto;
 }
 .chess_board .piece {
     color:#000;
