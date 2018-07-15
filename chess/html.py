@@ -26,7 +26,7 @@ HTML_HEAD = """<!doctype html>
     </head>
 <body>
 """
-DEFAULT_CSS = """.chess_board {
+DEFAULT_STYLE = """.chess_board {
     font-size:4em;
     font-family: sans-serif;
     border-collapse: collapse;
@@ -114,8 +114,8 @@ TABLE_ROW_COORDS = """<th>{rank}</th>
 """
 TABLE_DATA = """<td id="{square}" class="{lastmove}">{attack}{piece}</td>
 """
-TABLE_ATTACK = """<span class="attack">&times;</a>"""
-TABLE_PIECE = """<span class="piece {piece_name} {color} {check}">{symbol}</span>"""
+HTML_ATTACK = """<span class="attack">&times;</a>"""
+HTML_PIECE = """<span class="piece {name} {color} not-check">{symbol}</span>"""
 TABLE_ROW_END = """</tr>
 """
 TABLE_BODY_END = """</tbody>
@@ -140,11 +140,20 @@ TABLE_END = """</table>
 
 def piece(piece: chess.Piece):
     """Renders the given :class:`chess.Piece` as HTML escaped unicode.
+
+    >>> import chess
+    >>> import chess.html
+    >>>
+    >>> chess.html.piece(chess.Piece.from_symbol("R"))  # doctest: +SKIP
+    '<span class="piece rook white not-check">&#9814;</span>'
     """
-    return piece.unicode_symbol().encode('ascii', 'xmlcharrefreplace').decode()
+    symb = piece.unicode_symbol().encode('ascii', 'xmlcharrefreplace').decode()
+    data = {'symbol': symb, 'color': chess.COLOR_NAMES[piece.color],
+            'name': chess.PIECE_NAMES[piece.piece_type]}
+    return HTML_PIECE.format(**data)
 
 
-def board(board: chess.Board, squares=[], flipped=False, coordinates=True,
+def board(board: chess.Board, *, squares=[], flipped=False, coordinates=True,
           lastmove=None, check=None, snippet=True, style=None):
     """Renders a board with pieces and/or selected squares as an HTML table.
 
@@ -157,12 +166,21 @@ def board(board: chess.Board, squares=[], flipped=False, coordinates=True,
     :param check: A square to be marked as check.
     :param snippet: Pass ``False`` to return a complete HTML document.
     :param style: A CSS stylesheet to include in the HTML document. Has no effect if ``snippet`` is ``True``.
+
+    >>> import chess
+    >>> import chess.html
+    >>>
+    >>> board = chess.Board("8/8/8/8/4N3/8/8/8 w - - 0 1")
+    >>> squares = board.attacks(chess.E4)
+    >>> html = chess.html.board(board=board, squares=squares, snippet=False)  # doctest: +SKIP
+    >>> with open('output.html', 'w') as f:
+    >>>     f.write(html)
     """
     if snippet:
         html = TABLE_START
     else:
         if not style:
-            style = DEFAULT_CSS
+            style = DEFAULT_STYLE
         html = HTML_HEAD.format(style=style)
         html += TABLE_START
     if coordinates:
@@ -179,25 +197,17 @@ def board(board: chess.Board, squares=[], flipped=False, coordinates=True,
         for file in chess.FILE_NAMES:
             square = chess.square(chess.FILE_NAMES.index(file),
                                   chess.RANK_NAMES.index(rank))
-            data = {'square': chess.square_name(square), 'piece_name': '',
-                    'color': '', 'symbol': '', 'attack': '', 'check': '',
-                    'lastmove': '', 'piece': ''}
+            data = {'square': chess.square_name(square), 'attack': '',
+                    'check': '', 'lastmove': '', 'piece': ''}
             if square in squares:
-                data['attack'] = TABLE_ATTACK
+                data['attack'] = HTML_ATTACK
             if lastmove and square in [lastmove.from_square,
                                        lastmove.to_square]:
                 data['lastmove'] = 'lastmove'
             if square in board.piece_map():
-                piece_obj = board.piece_map()[square]
-                data['symbol'] = piece(piece_obj)
-                data['color'] = chess.COLOR_NAMES[piece_obj.color]
-                data['piece_name'] = chess.PIECE_NAMES[piece_obj.piece_type]
+                data['piece'] = piece(board.piece_map()[square])
                 if square == check:
-                    data['check'] = 'check'
-                elif (board.is_check() and piece_obj.piece_type == chess.KING
-                      and board.turn == piece_obj.color):
-                    data['check'] = 'check'
-                data['piece'] = TABLE_PIECE.format(**data)
+                    data['piece'] = data['piece'].replace('not-check', 'check')
             html += TABLE_DATA.format(**data)
         if coordinates:
             html += TABLE_ROW_COORDS.format(rank=rank)
