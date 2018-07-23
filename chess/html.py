@@ -68,7 +68,6 @@ DEFAULT_STYLE = """.chess_board {
     vertical-align:middle;
     font-weight: normal;
     font-size:.5em;
-    text-transform: uppercase;
 }
 .chess_board .check {
     background: -moz-radial-gradient(center, ellipse cover, rgba(255,0,0,1) 0%, rgba(231,0,0,0.5) 50%, rgba(158,0,0,0) 100%);
